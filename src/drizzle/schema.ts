@@ -6,6 +6,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const RecipesTable = pgTable("recipes", {
@@ -22,10 +23,14 @@ export const IngredientsTable = pgTable("ingredients", {
   quantity: numeric("quantity").notNull(),
   productEan: text("product_ean")
     .notNull()
-    .references(() => ProductsTable.ean),
+    .references(() => ProductsTable.ean, {
+      onDelete: "cascade",
+    }),
   recipeId: integer("recipe_id")
     .notNull()
-    .references(() => RecipesTable.id),
+    .references(() => RecipesTable.id, {
+      onDelete: "cascade",
+    }),
 });
 
 export const ProductsTable = pgTable("products", {
@@ -37,10 +42,20 @@ export const ProductsTable = pgTable("products", {
   quantity: numeric("quantity").notNull(),
 });
 
-export const StorePricesTable = pgTable("store_prices", {
-  id: serial("id").primaryKey(),
-  store: text("store").notNull(),
-  storeLogo: text("store_logo"),
-  price: numeric("price").notNull(),
-  productEan: text("product_ean").references(() => ProductsTable.ean),
-});
+export const StorePricesTable = pgTable(
+  "store_prices",
+  {
+    id: serial("id").primaryKey(),
+    store: text("store").notNull(),
+    storeLogo: text("store_logo"),
+    price: numeric("price").notNull(),
+    productEan: text("product_ean")
+      .notNull()
+      .references(() => ProductsTable.ean, {
+        onDelete: "cascade",
+      }),
+  },
+  (table) => ({
+    unq: unique().on(table.store, table.productEan),
+  }),
+);
