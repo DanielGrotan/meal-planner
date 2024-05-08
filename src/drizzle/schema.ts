@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
   integer,
   numeric,
@@ -59,3 +60,30 @@ export const StorePricesTable = pgTable(
     unq: unique().on(table.store, table.productEan),
   }),
 );
+
+export const productsRelations = relations(ProductsTable, ({ many }) => ({
+  storePrices: many(StorePricesTable),
+  ingredients: many(IngredientsTable),
+}));
+
+export const storePricesRelations = relations(StorePricesTable, ({ one }) => ({
+  product: one(ProductsTable, {
+    fields: [StorePricesTable.productEan],
+    references: [ProductsTable.ean],
+  }),
+}));
+
+export const ingredientsRelations = relations(IngredientsTable, ({ one }) => ({
+  product: one(ProductsTable, {
+    fields: [IngredientsTable.productEan],
+    references: [ProductsTable.ean],
+  }),
+  recipe: one(RecipesTable, {
+    fields: [IngredientsTable.recipeId],
+    references: [RecipesTable.id],
+  }),
+}));
+
+export const recipesRelations = relations(RecipesTable, ({ many }) => ({
+  ingredients: many(IngredientsTable),
+}));

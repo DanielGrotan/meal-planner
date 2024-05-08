@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  images: {
+    domains: ["bilder.ngdata.no", "bilder.kolonial.no"],
+  },
+};
 
 export default nextConfig;
