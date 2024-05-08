@@ -1,12 +1,18 @@
 import { db } from "@/drizzle/db";
-import { ProductsTable, StorePricesTable } from "@/drizzle/schema";
+import {
+  NutritionInfoTable,
+  ProductsTable,
+  StorePricesTable,
+} from "@/drizzle/schema";
 import { sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const searchParamsSchema = z.object({
   query: z.string(),
-  page: z.number().int().positive(),
+  page: z.preprocess((val) => parseInt(val), z.number().int().positive()),
 });
 
 const productsResponseSchema = z.object({
@@ -48,21 +54,16 @@ const productSchema = z.object({
     name: z.string(),
     logo: z.string().nullable(),
   }),
+  nutrition: z.array(
+    z.object({
+      display_name: z.string(),
+      amount: z.number().transform((val) => val.toString()),
+      unit: z.string(),
+    }),
+  ),
 });
 
-type RealProduct = {
-  name: string;
-  vendor: string;
-  ean: string;
-  image: string | null;
-  current_price: string;
-  weight: string;
-  weight_unit: string;
-  store: {
-    name: string;
-    logo: string | null;
-  };
-};
+type Product = z.infer<typeof productSchema>;
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -111,8 +112,6 @@ export async function GET(request: NextRequest) {
     .filter((product) => productSchema.safeParse(product).success)
     .map((product) => productSchema.parse(product));
 
-  console.log(products);
-
   if (products.length === 0) {
     return Response.json({
       products,
@@ -120,7 +119,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const eanToProduct = new Map<string, RealProduct>();
+  const eanToProduct = new Map<string, Product>();
 
   for (const product of products) {
     if (eanToProduct.has(product.ean)) {
@@ -146,6 +145,24 @@ export async function GET(request: NextRequest) {
     productEan: product.ean,
   }));
 
+  const nutritionInfoToStore = Array.from(eanToProduct.values()).reduce(
+    (previous, current) =>
+      previous.concat(
+        current.nutrition.map((nutrition) => ({
+          name: nutrition.display_name,
+          amount: nutrition.amount,
+          unit: nutrition.unit,
+          productEan: current.ean,
+        })),
+      ),
+    [] as {
+      name: string;
+      amount: string;
+      unit: string;
+      productEan: string;
+    }[],
+  );
+
   await db.transaction(async (tx) => {
     await tx
       .insert(ProductsTable)
@@ -160,6 +177,17 @@ export async function GET(request: NextRequest) {
         set: {
           price: sql`excluded.price`,
           storeLogo: sql`excluded.store_logo`,
+        },
+      });
+
+    await tx
+      .insert(NutritionInfoTable)
+      .values(nutritionInfoToStore)
+      .onConflictDoUpdate({
+        target: [NutritionInfoTable.name, NutritionInfoTable.productEan],
+        set: {
+          amount: sql`excluded.amount`,
+          unit: sql`excluded.unit`,
         },
       });
   });

@@ -14,6 +14,7 @@ export async function getProductsWithStorePrices() {
   return db.query.ProductsTable.findMany({
     with: {
       storePrices: true,
+      nutritionInfo: true,
     },
     orderBy: [asc(schema.ProductsTable.name)],
   });

@@ -61,9 +61,28 @@ export const StorePricesTable = pgTable(
   }),
 );
 
+export const NutritionInfoTable = pgTable(
+  "nutrition_info",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    amount: numeric("amount").notNull(),
+    unit: text("unit").notNull(),
+    productEan: text("product_ean")
+      .notNull()
+      .references(() => ProductsTable.ean, {
+        onDelete: "cascade",
+      }),
+  },
+  (table) => ({
+    unq: unique().on(table.name, table.productEan),
+  }),
+);
+
 export const productsRelations = relations(ProductsTable, ({ many }) => ({
   storePrices: many(StorePricesTable),
   ingredients: many(IngredientsTable),
+  nutritionInfo: many(NutritionInfoTable),
 }));
 
 export const storePricesRelations = relations(StorePricesTable, ({ one }) => ({
@@ -87,3 +106,13 @@ export const ingredientsRelations = relations(IngredientsTable, ({ one }) => ({
 export const recipesRelations = relations(RecipesTable, ({ many }) => ({
   ingredients: many(IngredientsTable),
 }));
+
+export const nutritionInfoRelations = relations(
+  NutritionInfoTable,
+  ({ one }) => ({
+    product: one(ProductsTable, {
+      fields: [NutritionInfoTable.productEan],
+      references: [ProductsTable.ean],
+    }),
+  }),
+);

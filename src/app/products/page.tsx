@@ -5,7 +5,7 @@ export default async function ProductsPage() {
   const products = await getProductsWithStorePrices();
 
   return (
-    <div>
+    <div className="container">
       <h1>Products Page</h1>
       <ProductList products={products} />
     </div>
