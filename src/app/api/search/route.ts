@@ -12,7 +12,10 @@ export const dynamic = "force-dynamic";
 
 const searchParamsSchema = z.object({
   query: z.string(),
-  page: z.preprocess((val) => parseInt(val), z.number().int().positive()),
+  page: z.preprocess(
+    (val) => parseInt(String(val)),
+    z.number().int().positive(),
+  ),
 });
 
 const productsResponseSchema = z.object({
